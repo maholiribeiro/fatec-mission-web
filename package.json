@@ -1,0 +1,29 @@
+{
+  "name": "fatec-mission-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Front-end mobile do Fatec Mission — missões que conectam, conquistas que transformam.",
+  "scripts": {
+    "dev": "vite",
+    "dev:mock": "vite --mode mock",
+    "dev:https": "vite --mode https",
+    "dev:mock:https": "vite --mode mock-https",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/oswald": "^5.1.0",
+    "@fontsource/public-sans": "^5.1.0",
+    "jsqr": "^1.4.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^7.0.0"
+  }
+}
