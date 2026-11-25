@@ -1,0 +1,88 @@
+name: CI/CD - App do estudante
+
+# CI em todo push e pull request para a main.
+# CD (deploy na Vercel) somente em push na main e somente se a CI passar.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: 22
+
+jobs:
+  ci:
+    name: CI - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v5
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      # O projeto não tem testes automatizados: o build do Vite é a verificação
+      # (falha se houver erro de import, sintaxe JSX ou dependência faltando).
+      - name: Build de produção
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || '/api' }}
+        run: npm run build
+
+      - name: Verificar saída do build
+        run: test -f dist/index.html
+
+  deploy:
+    name: CD - deploy na Vercel
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.APP_URL }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v5
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Instalar Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Baixar configuração do projeto na Vercel
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build para produção
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Publicar na Vercel
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+      - name: Verificar aplicação publicada
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          curl -fsS -o /dev/null -w "Status HTTP: %{http_code}\n" "$APP_URL"
+          # Rota interna do React Router: só responde 200 se o rewrite do vercel.json funcionar.
+          curl -fsS -o /dev/null -w "Status HTTP /login: %{http_code}\n" "$APP_URL/login"
